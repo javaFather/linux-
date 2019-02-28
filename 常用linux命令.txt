@@ -1,0 +1,5 @@
+touch test.sh		#创建sh文件
+
+chmod +x ./test.sh  #使脚本具有执行权限
+
+lsof -i:3000 #查询端口占用
