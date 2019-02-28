@@ -1,0 +1,22 @@
+
+read -p "请输入您要发布的分支名,例如develop  " branch
+if [ n "$branch"]; then
+  branch="master"
+fi
+echo "结束应用进程"
+fuser -k 8080/tcp
+fuser -k 7002/tcp
+
+echo "更新代码"
+cd ~/project/tpp
+git fetch
+git checkout $branch
+git pull origin $branch
+cd ~/project/tpp
+echo "开始编译tpp"
+mvn -Dmaven.test.skip=true clean package -U
+
+# 查找war包
+JARFILE=$(find /root/project/tpp/tpp-web/target -name "*.jar" | xargs awk 'END{ var=FILENAME; n=split (var,a,/\//); print a[n]}')
+cd ~/project/tpp/tpp-web/target
+nohup java -Denv=FAT -Dapollo.bootstrap.namespaces=application -jar $JARFILE  > /dev/null 2>&1 & tail -f /data/logs/tomcat/tpp-web.log
