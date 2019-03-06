@@ -1,0 +1,76 @@
+@Aspect
+@Component
+@Slf4j
+public class ApiLogAop {
+    @Autowired
+    ApiLogMapper apiLogMapper;
+
+    @Pointcut("execution(* com.zdmoney.credit.controller.*.*(..))")
+    public void ApiLogAop() {
+
+    }
+
+    /**
+     * 环绕切面，获取api的入参和出参
+     * @param joinPoint
+     * @author wangzx
+     * @date 2019/3/5 15:00
+     */
+    
+
+    @Around(value = "ApiLogAop()")
+    public Object doAround(ProceedingJoinPoint joinPoint) throws Throwable {
+        ApiLog apiLog = new ApiLog();
+        String name = joinPoint.getSignature().getName();
+        Object[] params = joinPoint.getArgs();
+        RequestBaseVo reqVo = getReqVo(params);
+        //方法名
+        apiLog.setMethodName(name);
+        //业务系统
+        apiLog.setBizSys(reqVo.getSources());
+        //请求时间
+        apiLog.setRequestTime(reqVo.getTimestamp());
+        //借款编号
+        apiLog.setAppNo(reqVo.getAppNo());
+        //方法返回值
+        Object proceed = joinPoint.proceed();
+        apiLog.setResponse(JSONObject.toJSONString(proceed));
+        MethodSignature methodSignature = (MethodSignature)joinPoint.getSignature();
+        //参数名
+        String[] parameterNames = methodSignature.getParameterNames();
+        HashMap map = Maps.newHashMap();
+        for (int i=0;i<parameterNames.length;i++) {
+                map.put(parameterNames[i],params[i]);
+        }
+        //方法入参
+        apiLog.setRequest(JSONObject.toJSONString(map));
+        apiLogMapper.insert(apiLog);
+        return proceed;
+    }
+
+    /**
+     * 返回参数的基类
+     * @param objects
+     * @author wangzx
+     * @date 2019/3/5 15:05
+     */
+    
+    private RequestBaseVo getReqVo(Object[] objects) {
+        RequestBaseVo vo = new RequestBaseVo();
+        if (objects.length > 0) {
+            for (Object object : objects) {
+                if (object instanceof RequestBaseVo) {
+                    vo = (RequestBaseVo) object;
+                }
+            }
+        }
+        return vo;
+
+    }
+
+}
+// boot项目需要的依赖
+       <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-aop</artifactId>
+        </dependency>
